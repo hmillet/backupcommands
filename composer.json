@@ -1,11 +1,15 @@
 {
-    "name": "abmundi/database-commands-bundle",
+    "name": "hmillet/database-commands-bundle",
     "type": "symfony-bundle",
     "description": "Provides a series of database commands for your Symfony application, one for the console and 5 capifony tasks.",
     "keywords": ["database", "mysql", "doctrine", "backup", "capifony"],
-    "homepage": "https://github.com/ABMundi/DatabaseCommands",
+    "homepage": "https://github.com/hmillet/DatabaseCommands",
     "license": "MIT",
     "authors": [
+        {
+            "name": "Hervé Millet",
+            "email": "hmillet@gmail.com"
+        },
         {
             "name": "Fabio Fabbrucci",
             "email": "fabio.fabbrucci@gmail.com"
@@ -16,7 +20,7 @@
         "symfony/framework-bundle": "2.*"
     },
     "autoload": {
-        "psr-0": { "Abmundi\\DatabaseCommandsBundle": "" }
+        "psr-0": { "Hmillet\\DatabaseCommandsBundle": "" }
     },
-    "target-dir" : "Abmundi/DatabaseCommandsBundle"
+    "target-dir" : "Hmillet/DatabaseCommandsBundle"
 }
