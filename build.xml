@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project name="Abmundi" default="build">
+<project name="Hmillet" default="build">
     <target name="phpcs"
             description="Symfony2 coding standard">
         <phpcodesniffer
