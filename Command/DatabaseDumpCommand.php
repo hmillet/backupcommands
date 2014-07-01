@@ -98,8 +98,9 @@ class DatabaseDumpCommand extends ContainerAwareCommand
     {
         $dbName = $this->getContainer()->getParameter('database_name');
         $dbUser = $this->getContainer()->getParameter('database_user');
-        $dbPwd = $this->getContainer()->getParameter('database_password');
-        $mysqldump=  new Process(sprintf('mysqldump -u %s --password=%s %s | bzip2 -c > %s', $dbUser, $dbPwd, $dbName, $this->toFile));
+        $dbPwd  = $this->getContainer()->getParameter('database_password');
+        $dbHost = $this->getContainer()->getParameter('database_host');
+        $mysqldump=  new Process(sprintf('mysqldump -u %s --password=%s -h %s %s | bzip2 -c > %s', $dbUser, $dbPwd, $dbHost, $dbName, $this->toFile));
         $mysqldump->run();
         if ($mysqldump->isSuccessful()) {
             $output->writeln(sprintf('<info>Database %s dumped succesfully</info>', $dbName));
