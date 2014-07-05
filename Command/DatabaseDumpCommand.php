@@ -44,7 +44,8 @@ class DatabaseDumpCommand extends ContainerAwareCommand
         $this->directory = "app/tmp/dump";
         $this->link = "app/tmp/dump/current.sql.bz2";
 
-        $this->filename = date('YmdHis').'.sql.bz2';
+        $dbName = $this->getContainer()->getParameter('database_name');
+        $this->filename = $dbName . "-" . date('YmdHis').'.sql.bz2';
         $this->toFile = $this->directory . '/' . $this->filename;
 
         $time = new \DateTime();
