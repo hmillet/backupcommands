@@ -1,11 +1,11 @@
 <?php
 
-namespace Hmillet\DatabaseCommandsBundle\DependencyInjection;
+namespace Hmillet\BackupCommandsBundle\DependencyInjection;
 
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
-class HmilletDatabaseCommandsExtension extends Extension
+class HmilletBackupCommandsExtension extends Extension
 {
     public function load(array $configs, ContainerBuilder $container)
     {
@@ -13,13 +13,13 @@ class HmilletDatabaseCommandsExtension extends Extension
         $config        = $this->processConfiguration($configuration, $configs);
         
         if ($config['dropbox']) {
-            $container->setParameter('hmillet_database_commands.dropbox.access_token', $config['dropbox']['access_token']);
+            $container->setParameter('hmillet_backup_commands.dropbox.access_token', $config['dropbox']['access_token']);
         }
 
     }
 
     public function getNamespace()
     {
-        return 'hmillet_database_commands';
+        return 'hmillet_ackup_commands';
     }
 }

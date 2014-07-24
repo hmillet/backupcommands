@@ -1,4 +1,5 @@
 # netbean files
 nbproject/*
+.c9/*
 
 !*.gitkeep

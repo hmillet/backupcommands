@@ -1,9 +1,9 @@
 {
-    "name": "hmillet/database-commands-bundle",
+    "name": "hmillet/backup-commands-bundle",
     "type": "symfony-bundle",
-    "description": "Provides a series of database commands for your Symfony application, one for the console and 5 capifony tasks.",
-    "keywords": ["database", "mysql", "doctrine", "backup", "capifony"],
-    "homepage": "https://github.com/hmillet/DatabaseCommands",
+    "description": "Provides backup commands for your Symfony application, with the ability to push backup files to a dropbox",
+    "keywords": ["database", "mysql", "doctrine", "backup", "dropbox"],
+    "homepage": "https://bitbucket.org/hmillet/backupcommands",
     "license": "MIT",
     "authors": [
         {
@@ -21,7 +21,7 @@
         "dropbox/dropbox-sdk": "1.1.*"
     },
     "autoload": {
-        "psr-0": { "Hmillet\\DatabaseCommandsBundle": "" }
+        "psr-0": { "Hmillet\\BackupCommandsBundle": "" }
     },
-    "target-dir" : "Hmillet/DatabaseCommandsBundle"
+    "target-dir" : "Hmillet/BackupCommandsBundle"
 }

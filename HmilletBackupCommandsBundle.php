@@ -1,5 +1,5 @@
 <?php
-namespace Hmillet\DatabaseCommandsBundle;
+namespace Hmillet\BackupCommandsBundle;
 
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -8,8 +8,8 @@ use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 /**
  * This is the class bundle
  * 
- * @author Fabio Fabbrucci <fabio.fabbrucci@gmail.com> 
+ * @author Hervé Millet <hmillet@gmail.com> 
  */
-class HmilletDatabaseCommandsBundle extends Bundle
+class HmilletBackupCommandsBundle extends Bundle
 {
 }

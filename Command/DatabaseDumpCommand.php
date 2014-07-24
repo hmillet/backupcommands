@@ -1,5 +1,5 @@
 <?php
-namespace Hmillet\DatabaseCommandsBundle\Command;
+namespace Hmillet\BackupCommandsBundle\Command;
 
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputArgument;
