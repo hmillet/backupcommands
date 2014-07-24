@@ -2,9 +2,7 @@
 namespace Hmillet\BackupCommandsBundle\Command;
 
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Process\Process;
 
@@ -100,7 +98,6 @@ class DatabaseDumpCommand extends ContainerAwareCommand
             $this->failingProcess = $mkdir;
             return false;
         }
-        // $output->writeln(sprintf('<info>Directory %s already exists</info>', $this->directory));
         return true;
     }
 
@@ -154,7 +151,6 @@ class DatabaseDumpCommand extends ContainerAwareCommand
     {
         try {
             $dbx_client           = new Client($dropbox_access_token, "HmilletDatabaseCommand/1.0", 'fr');
-            //var_dump($dbx_client->getAccountInfo());
             $dbx_account_info     = $dbx_client->getAccountInfo();
             $output->writeln('<info>Connected to dropbox account "' . $dbx_account_info['display_name'] . '"</info>');
         } catch (\Dropbox\Exception_InvalidAccessToken $e) {
@@ -191,7 +187,6 @@ class DatabaseDumpCommand extends ContainerAwareCommand
         $metadata = $client->uploadFile($dropboxPath, \Dropbox\WriteMode::add(), $fp, $size);
         fclose($fp);
 
-        //print_r($metadata);
         $output->writeln('<info>File uploaded to dropbox : "' . $metadata['path'] . '"</info>');
         
         return true;

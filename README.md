@@ -1,7 +1,7 @@
 # Hmillet Backup Commands Bundle #
 
-This bundle provides a way to run a series of cBackup commands in your Symfony application.
-It provides one command line for our console, and 5 capifony tasks.
+This bundle provides symfony console commands that allow you to backup your database and your files in your dropbox
+
 
 ## Installation ##
 
