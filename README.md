@@ -2,6 +2,7 @@
 
 This bundle provides symfony console commands that allow you to backup your database and your files in your dropbox
 
+[![SensioLabsInsight](https://insight.sensiolabs.com/projects/06c239a1-6497-4210-b96a-0cd9d8e05e79/big.png)](https://insight.sensiolabs.com/projects/06c239a1-6497-4210-b96a-0cd9d8e05e79)
 
 ## Installation ##
 
