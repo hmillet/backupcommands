@@ -3,7 +3,7 @@
     "type": "symfony-bundle",
     "description": "Provides backup commands for your Symfony application, with the ability to push backup files to a dropbox",
     "keywords": ["database", "mysql", "doctrine", "backup", "dropbox"],
-    "homepage": "https://bitbucket.org/hmillet/backupcommands",
+    "homepage": "https://github.com/hmillet/backupcommands",
     "license": "MIT",
     "authors": [
         {
