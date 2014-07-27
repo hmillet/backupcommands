@@ -10,7 +10,7 @@ This bundle provides symfony console commands that allow you to backup your data
 
 #### Using Composer
 
-Add the following code to your composer.json:
+Add the following code to your composer.json :
 
     "require": {
         ...
@@ -26,7 +26,7 @@ Run a Composer update
 
 ### Step 2
 
-Register the bundle in the `AppKernel.php` file:
+Register the bundle in the `AppKernel.php` file :
 
     public function registerBundles()
     {
@@ -41,13 +41,13 @@ Register the bundle in the `AppKernel.php` file:
 
 ### Step 3 (optionnal)
 
-Add parameters and configuration for the bundle, so it can read and write to your drobbox:
+Add parameters and configuration for the bundle, so it can read and write to your dropbox :
 
-in app/config/parameters.yml-dist :
+in app/config/parameters.yml-dist (otherwise, "composer.phar update" will remove your parameter from parameters.yml) :
 
     backup_dropbox_access_token: ~
 
-in parameters.yml :
+in app/config/parameters.yml :
 
     app/config/backup_dropbox_access_token: your token
 
