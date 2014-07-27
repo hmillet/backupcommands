@@ -19,7 +19,7 @@ class DatabaseDumpCommand extends ContainerAwareCommand
     protected $toFile;
 
     /**
-     * This method set name and description 
+     * This method set name and description
      */
     protected function configure()
     {
@@ -43,12 +43,12 @@ class DatabaseDumpCommand extends ContainerAwareCommand
     {
         $dropboxBackup = false;
         try {
-            $dropbox_access_token = $this->getContainer()->getParameter('hmillet_database_commands.dropbox.access_token');
+            $dropbox_access_token = $this->getContainer()->getParameter('hmillet_backup_commands.dropbox.access_token');
             $dbx_client           = $this->dropboxConnect($output, $dropbox_access_token);
             $dropboxBackup = true;
         } catch (\Symfony\Component\DependencyInjection\Exception\InvalidArgumentException $e) {
         }
-        
+
         $this->directory = $this->getContainer()->get('kernel')->getRootDir() . "/tmp/dump";
         $this->link      = $this->directory . '/' . "current.sql.bz2";
 
@@ -80,10 +80,10 @@ class DatabaseDumpCommand extends ContainerAwareCommand
 
     /**
      * Create folder for dump
-     * 
+     *
      * @param OutputInterface $output
-     * 
-     * @return boolean 
+     *
+     * @return boolean
      */
     protected function prepareEnviroment(OutputInterface $output)
     {
@@ -103,10 +103,10 @@ class DatabaseDumpCommand extends ContainerAwareCommand
 
     /**
      * Run MysqlDump
-     * 
+     *
      * @param OutputInterface $output
-     * 
-     * @return boolean 
+     *
+     * @return boolean
      */
     protected function mysqldump(OutputInterface $output)
     {
@@ -126,10 +126,10 @@ class DatabaseDumpCommand extends ContainerAwareCommand
 
     /**
      * Create link to last dump
-     * 
+     *
      * @param type $output
-     * 
-     * @return boolean 
+     *
+     * @return boolean
      */
     protected function createLink($output)
     {
@@ -142,11 +142,11 @@ class DatabaseDumpCommand extends ContainerAwareCommand
         $this->failingProcess = $link;
         return false;
     }
-    
+
     /**
      * Dropbox methods
      */
-    
+
     protected function dropboxConnect($output, $dropbox_access_token)
     {
         try {
@@ -158,10 +158,10 @@ class DatabaseDumpCommand extends ContainerAwareCommand
             $lines    = explode("\n", $response);
             $message  = json_decode($lines[1], true);
             $output->writeln('<error>Dropbox connection failed : "' . $lines[0] . " - " . $message['error'] . '"</error>');
-            
+
             return false;
         }
-        
+
         return $dbx_client;
     }
 
@@ -170,7 +170,7 @@ class DatabaseDumpCommand extends ContainerAwareCommand
         $pathError = \Dropbox\Path::findErrorNonRoot($dropboxPath);
         if ($pathError !== null) {
             $output->writeln('<error>Dropbox upload failed - Invalid <dropbox-path> : "' . $pathError . '"</error>');
-            
+
             return false;
         }
 
@@ -179,7 +179,7 @@ class DatabaseDumpCommand extends ContainerAwareCommand
             $size = \filesize($sourcePath);
         } else {
             $output->writeln('<error>Dropbox upload failed - Invalid <source-path> : "' . $sourcePath . '"</error>');
-            
+
             return false;
         }
 
@@ -188,7 +188,7 @@ class DatabaseDumpCommand extends ContainerAwareCommand
         fclose($fp);
 
         $output->writeln('<info>File uploaded to dropbox : "' . $metadata['path'] . '"</info>');
-        
+
         return true;
     }
 }

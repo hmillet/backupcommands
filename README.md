@@ -39,6 +39,24 @@ Register the bundle in the `AppKernel.php` file:
         return $bundles;
     }
 
+### Step 3 (optionnal)
+
+Add parameters and configuration for the bundle, so it can read and write to your drobbox:
+
+in app/config/parameters.yml-dist :
+
+    backup_dropbox_access_token: ~
+
+in parameters.yml :
+
+    app/config/backup_dropbox_access_token: your token
+
+in app/config/config.yml :
+
+    hmillet_backup_commands:
+        dropbox:
+            access_token: %backup_dropbox_access_token%
+
 ## Requirements ##
 
 This bundle needs (in local and remote server)

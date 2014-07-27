@@ -11,8 +11,8 @@ class HmilletBackupCommandsExtension extends Extension
     {
         $configuration = new Configuration();
         $config        = $this->processConfiguration($configuration, $configs);
-        
-        if ($config['dropbox']) {
+
+        if (isset($config['dropbox'])) {
             $container->setParameter('hmillet_backup_commands.dropbox.access_token', $config['dropbox']['access_token']);
         }
 
@@ -20,6 +20,6 @@ class HmilletBackupCommandsExtension extends Extension
 
     public function getNamespace()
     {
-        return 'hmillet_ackup_commands';
+        return 'hmillet_backup_commands';
     }
 }
