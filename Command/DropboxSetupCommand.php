@@ -4,10 +4,6 @@ namespace Hmillet\BackupCommandsBundle\Command;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Process\Process;
-
-use Dropbox\AppInfo;
-use Dropbox\WebAuthNoRedirect;
 
 /**
  * Command that dumps
@@ -53,7 +49,7 @@ class DropboxSetupCommand extends ContainerAwareCommand
         $accessToken    = json_decode(file_get_contents('http://api.hmillet.com/dropbox/authorization/finish/hmillet-backup-symfony2-bundle/' . $authCode));
         $output->writeln('');
 
-        $output->writeln('<info>5. Put the following line "backup_dropbox_access_token: ' . $accessToken . '" in your  "app/config/parameters.yml.dist" file</info>');
+        $output->writeln('5. Put the following line "backup_dropbox_access_token: ' . $accessToken . '" in your  "app/config/parameters.yml" file');
         $output->writeln('');
     }
 }
