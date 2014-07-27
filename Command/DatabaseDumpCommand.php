@@ -150,7 +150,7 @@ class DatabaseDumpCommand extends ContainerAwareCommand
     protected function dropboxConnect($output, $dropbox_access_token)
     {
         try {
-            $dbx_client           = new Client($dropbox_access_token, "HmilletDatabaseCommand/1.0", 'fr');
+            $dbx_client           = new Client($dropbox_access_token, "HmilletBackupCommand/1.0", 'fr');
             $dbx_account_info     = $dbx_client->getAccountInfo();
             $output->writeln('<info>Connected to dropbox account "' . $dbx_account_info['display_name'] . '"</info>');
         } catch (\Dropbox\Exception_InvalidAccessToken $e) {
