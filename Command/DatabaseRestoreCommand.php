@@ -4,6 +4,7 @@ namespace Hmillet\BackupCommandsBundle\Command;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+
 use Symfony\Component\Process\Process;
 
 use Dropbox\Client;
@@ -11,7 +12,7 @@ use Dropbox\Client;
 /**
  * Command that dumps
  */
-class DatabaseDumpCommand extends ContainerAwareCommand
+class DatabaseRestoreCommand extends ContainerAwareCommand
 {
     protected $directory;
     protected $filename;
@@ -25,8 +26,8 @@ class DatabaseDumpCommand extends ContainerAwareCommand
     {
         parent::configure();
         $this
-            ->setName('db:dump')
-            ->setDescription('This task dump the database in a file');
+            ->setName('db:restore')
+            ->setDescription('This task restore the database from a dump file');
     }
 
     /**
@@ -37,6 +38,7 @@ class DatabaseDumpCommand extends ContainerAwareCommand
      *
      * @return integer 0 if everything went fine, or an error code
      *
+     * @throws \Exception
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
@@ -49,31 +51,13 @@ class DatabaseDumpCommand extends ContainerAwareCommand
         }
 
         $this->directory = $this->getContainer()->get('kernel')->getRootDir() . "/tmp/dump";
-        $this->link      = $this->directory . '/' . "current.sql.bz2";
 
-        $dbName          = $this->getContainer()->getParameter('database_name');
-        $this->filename  = $dbName . "-" . date('YmdHis').'.sql.bz2';
-        $this->toFile    = $this->directory . '/' . $this->filename;
-
-        $time = new \DateTime();
-
-        if ($this->prepareEnviroment($output)
-            && $this->mysqldump($output)
-            && $this->createLink($output)
-        ) {
-            $output->writeln("<info>Dumped in $this->toFile in ". $time->diff($time = new \DateTime())->format('%s seconds').'</info>');
-            if ($dropboxBackup) {
-               if ($this->dropboxUpload($output, $dbx_client, $this->toFile, '/' . $dbName . '/' . $this->filename)) {
-                   unlink($this->toFile);
-                   $output->writeln(sprintf('<info>Deleted file %s succesfully</info>', $this->toFile));
-               }
-            }
-            $output->writeln('<info>MISSION ACCOMPLISHED</info>');
+        if ($dropboxBackup) {
+            // First of all, look for a dump file in dropbox
+            $this->dropboxSelectFile($output, $dbx_client);
         } else {
-            $output->writeln('<error>Nasty error happened :\'-(</error>');
-            if ($this->failingProcess instanceOf Process) {
-                $output->writeln('<error>%s</error>', $this->failingProcess->getErrorOutput());
-            }
+            throw new \Exception("Restore from local files not yet implemented", 1);
+            
         }
     }
 
@@ -101,48 +85,6 @@ class DatabaseDumpCommand extends ContainerAwareCommand
     }
 
     /**
-     * Run MysqlDump
-     *
-     * @param OutputInterface $output
-     *
-     * @return boolean
-     */
-    protected function mysqldump(OutputInterface $output)
-    {
-        $dbName = $this->getContainer()->getParameter('database_name');
-        $dbUser = $this->getContainer()->getParameter('database_user');
-        $dbPwd  = $this->getContainer()->getParameter('database_password');
-        $dbHost = $this->getContainer()->getParameter('database_host');
-        $mysqldump=  new Process(sprintf('mysqldump -u %s --password=%s -h %s %s | bzip2 -c > %s', $dbUser, $dbPwd, $dbHost, $dbName, $this->toFile));
-        $mysqldump->run();
-        if ($mysqldump->isSuccessful()) {
-            $output->writeln(sprintf('<info>Database %s dumped succesfully</info>', $dbName));
-            return true;
-        }
-        $this->failingProcess = $mysqldump;
-        return false;
-    }
-
-    /**
-     * Create link to last dump
-     *
-     * @param type $output
-     *
-     * @return boolean
-     */
-    protected function createLink($output)
-    {
-        $link = new Process(sprintf('ln -f %s %s', $this->toFile, $this->link));
-        $link->run();
-        if ($link->isSuccessful()) {
-            $output->writeln(sprintf('<info>Link %s created succesfully</info>', $this->link));
-            return true;
-        }
-        $this->failingProcess = $link;
-        return false;
-    }
-
-    /**
      * Dropbox methods
      */
 
@@ -164,7 +106,47 @@ class DatabaseDumpCommand extends ContainerAwareCommand
         return $dbx_client;
     }
 
-    protected function dropboxUpload($output, $client, $sourcePath, $dropboxPath)
+    protected function dropboxSelectFile($output, $client)
+    {
+        $output->writeln('<question>Please choose the file to restore</question>');
+
+        $path = "/";
+        $entry = $client->getMetadataWithChildren($path);
+
+        while ($entry["is_dir"]) {
+            $children = array();
+            $folders  = array();
+            $files    = array();
+            foreach($entry["contents"] as $child) {
+                if (($child["is_dir"])) {
+                    $folders[] = $child['path'] . "/";
+                }
+                else {
+                    $files[]   = $child['path'];
+                }
+            }
+            $children = array_merge($folders, $files);
+            if ($path !== "/") {
+                array_unshift($children, $path . "/..");
+            }
+            $dialog = $this->getHelper('dialog');
+            $choice = $dialog->select($output, 'Please select an entry :', $children, 0);
+
+            $path   = rtrim($children[$choice],"/");
+
+            $entry  = $client->getMetadataWithChildren($path);
+            $path   = $entry['path'];
+            //\Doctrine\Common\Util\Debug::dump($entry,1);
+            //break;
+        }
+
+        $output->writeln('<info>You choose : "' . $path . '"</info>');
+
+        return $path;
+
+    }
+
+    protected function dropboxDownload($output, $client, $destPath)
     {
         $pathError = \Dropbox\Path::findErrorNonRoot($dropboxPath);
         if ($pathError !== null) {
