@@ -4,6 +4,8 @@ namespace Hmillet\BackupCommandsBundle\Command;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Filesystem\Exception\IOException;
 
 use Symfony\Component\Process\Process;
 
@@ -14,11 +16,10 @@ use Dropbox\Client;
  */
 class DatabaseRestoreCommand extends ContainerAwareCommand
 {
-    protected $directory;
-    protected $filename;
-    protected $link;
-    protected $toFile;
-
+    protected $dumpFolder;
+    protected $dumpFile;
+    protected $failingProcess;
+    
     /**
      * This method set name and description
      */
@@ -43,6 +44,8 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $dropboxBackup = false;
+        $toContinue    = true;
+        
         try {
             $dropbox_access_token = $this->getContainer()->getParameter('hmillet_backup_commands.dropbox.access_token');
             $dbx_client           = $this->dropboxConnect($output, $dropbox_access_token);
@@ -50,14 +53,37 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
         } catch (\Symfony\Component\DependencyInjection\Exception\InvalidArgumentException $e) {
         }
 
-        $this->directory = $this->getContainer()->get('kernel')->getRootDir() . "/tmp/dump";
+        $this->dumpFolder = $this->getContainer()->get('kernel')->getRootDir() . "/tmp/dump";
+        
+        $this->dumpFile   = $this->dumpFolder . '/' . "current.sql.bz2";
 
-        if ($dropboxBackup) {
-            // First of all, look for a dump file in dropbox
-            $this->dropboxSelectFile($output, $dbx_client);
+        if ($toContinue) {
+            $toContinue = $this->prepareEnviroment($output);
+        }
+
+        if ($toContinue) {
+            if ($dropboxBackup) {
+                // First of all, look for a dump file in dropbox
+                $srcPath    = $this->dropboxSelectFile($output, $dbx_client);
+                // Then download it and put it in dumpfolder as current dump
+                $toContinue = $this->dropboxDownloadFile($output, $dbx_client, $srcPath, $this->dumpFile);
+            } else {
+                $fs         = new Filesystem();
+                $toContinue = $fs->exists($this->dumpFile);
+            }
+        }
+        
+        if ($toContinue) {
+            $toContinue = $this->mysqlRestore($output);
+        }
+        
+        if ($toContinue) {
+            $output->writeln('<info>MISSION ACCOMPLISHED</info>');
         } else {
-            throw new \Exception("Restore from local files not yet implemented", 1);
-            
+            $output->writeln('<error>Nasty error happened :\'-(</error>');
+            if ($this->failingProcess instanceOf Process) {
+                $output->writeln('<error>%s</error>', $this->failingProcess->getErrorOutput());
+            }
         }
     }
 
@@ -70,20 +96,45 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
      */
     protected function prepareEnviroment(OutputInterface $output)
     {
-        if (!is_dir($this->directory)) {
-            $mkdir = new Process(sprintf('mkdir -p %s', $this->directory));
-            $mkdir->run();
-
-            if ($mkdir->isSuccessful()) {
-                $output->writeln(sprintf('<info>Directory %s succesfully  created</info>', $this->directory));
+        $fs = new Filesystem();
+        if (!$fs->exists($this->dumpFolder)) {
+            try {
+                $fs->mkdir($this->dumpFolder);
+                $output->writeln(sprintf('<info>dumpFolder %s succesfully  created</info>', $this->dumpFolder));
                 return true;
-            }
-            $this->failingProcess = $mkdir;
-            return false;
+            } catch (IOException $e) {
+                $output->writeln(sprintf('<error>Failed to create dumpFolder %s</error>', $this->dumpFolder));
+            }        
         }
+        
         return true;
     }
 
+    /**
+     * Run Mysql command
+     *
+     * @param OutputInterface $output
+     *
+     * @return boolean
+     */
+    protected function mysqlRestore(OutputInterface $output)
+    {
+        $dbName  = $this->getContainer()->getParameter('database_name');
+        $dbUser  = $this->getContainer()->getParameter('database_user');
+        $dbPwd   = $this->getContainer()->getParameter('database_password');
+        $dbHost  = $this->getContainer()->getParameter('database_host');
+        $command = sprintf('bzip2 -dc %s | mysql -u %s --password=%s -h %s %s ', $this->dumpFile, $dbUser, $dbPwd, $dbHost, $dbName);
+        $mysql   =  new Process($command);
+        $mysql->run();
+        if ($mysql->isSuccessful()) {
+            $output->writeln(sprintf('<info>Database %s restored succesfully</info>', $dbName));
+            return true;
+        }
+        $this->failingProcess = $mysql;
+        
+        return false;
+    }
+    
     /**
      * Dropbox methods
      */
@@ -136,8 +187,6 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
 
             $entry  = $client->getMetadataWithChildren($path);
             $path   = $entry['path'];
-            //\Doctrine\Common\Util\Debug::dump($entry,1);
-            //break;
         }
 
         $output->writeln('<info>You choose : "' . $path . '"</info>');
@@ -146,29 +195,22 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
 
     }
 
-    protected function dropboxDownload($output, $client, $destPath)
+    protected function dropboxDownloadFile($output, $client, $srcPath, $dstPath)
     {
-        $pathError = \Dropbox\Path::findErrorNonRoot($dropboxPath);
+        $pathError = \Dropbox\Path::findErrorNonRoot($srcPath);
         if ($pathError !== null) {
-            $output->writeln('<error>Dropbox upload failed - Invalid <dropbox-path> : "' . $pathError . '"</error>');
+            $output->writeln('<error>Dropbox download failed - Invalid <dropbox-path> : "' . $pathError . '"</error>');
 
             return false;
         }
 
-        $size = null;
-        if (\stream_is_local($sourcePath)) {
-            $size = \filesize($sourcePath);
-        } else {
-            $output->writeln('<error>Dropbox upload failed - Invalid <source-path> : "' . $sourcePath . '"</error>');
-
+        $metadata = $client->getFile($srcPath, fopen($dstPath, "wb"));
+        if ($metadata === null) {
+            fwrite(STDERR, "File not found on Dropbox.\n");
             return false;
         }
 
-        $fp = fopen($sourcePath, "rb");
-        $metadata = $client->uploadFile($dropboxPath, \Dropbox\WriteMode::add(), $fp, $size);
-        fclose($fp);
-
-        $output->writeln('<info>File uploaded to dropbox : "' . $metadata['path'] . '"</info>');
+        $output->writeln('<info>File downloaded from dropbox "' . $srcPath . '" to "' . $dstPath . '"</info>');
 
         return true;
     }

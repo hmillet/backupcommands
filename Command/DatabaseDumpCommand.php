@@ -5,6 +5,8 @@ use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Process\Process;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Filesystem\Exception\IOException;
 
 use Dropbox\Client;
 
@@ -13,10 +15,11 @@ use Dropbox\Client;
  */
 class DatabaseDumpCommand extends ContainerAwareCommand
 {
-    protected $directory;
+    protected $dumpFolder;
     protected $filename;
     protected $link;
     protected $toFile;
+    protected $failingProcess;
 
     /**
      * This method set name and description
@@ -48,12 +51,12 @@ class DatabaseDumpCommand extends ContainerAwareCommand
         } catch (\Symfony\Component\DependencyInjection\Exception\InvalidArgumentException $e) {
         }
 
-        $this->directory = $this->getContainer()->get('kernel')->getRootDir() . "/tmp/dump";
-        $this->link      = $this->directory . '/' . "current.sql.bz2";
+        $this->dumpFolder = $this->getContainer()->get('kernel')->getRootDir() . "/tmp/dump";
+        $this->link       = $this->dumpFolder . '/' . "current.sql.bz2";
 
-        $dbName          = $this->getContainer()->getParameter('database_name');
-        $this->filename  = $dbName . "-" . date('YmdHis').'.sql.bz2';
-        $this->toFile    = $this->directory . '/' . $this->filename;
+        $dbName           = $this->getContainer()->getParameter('database_name');
+        $this->filename   = $dbName . "-" . date('YmdHis').'.sql.bz2';
+        $this->toFile     = $this->dumpFolder . '/' . $this->filename;
 
         $time = new \DateTime();
 
@@ -86,17 +89,17 @@ class DatabaseDumpCommand extends ContainerAwareCommand
      */
     protected function prepareEnviroment(OutputInterface $output)
     {
-        if (!is_dir($this->directory)) {
-            $mkdir = new Process(sprintf('mkdir -p %s', $this->directory));
-            $mkdir->run();
-
-            if ($mkdir->isSuccessful()) {
-                $output->writeln(sprintf('<info>Directory %s succesfully  created</info>', $this->directory));
+        $fs = new Filesystem();
+        if (!$fs->exists($this->dumpFolder)) {
+            try {
+                $fs->mkdir($this->dumpFolder);
+                $output->writeln(sprintf('<info>dumpFolder %s succesfully  created</info>', $this->dumpFolder));
                 return true;
-            }
-            $this->failingProcess = $mkdir;
-            return false;
+            } catch (IOException $e) {
+                $output->writeln(sprintf('<error>Failed to create dumpFolder %s</error>', $this->dumpFolder));
+            }        
         }
+        
         return true;
     }
 
