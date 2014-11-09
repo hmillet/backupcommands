@@ -19,7 +19,7 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
     protected $dumpFolder;
     protected $dumpFile;
     protected $failingProcess;
-    
+
     /**
      * This method set name and description
      */
@@ -45,7 +45,7 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
     {
         $dropboxBackup = false;
         $toContinue    = true;
-        
+
         try {
             $dropbox_access_token = $this->getContainer()->getParameter('hmillet_backup_commands.dropbox.access_token');
             $dbx_client           = $this->dropboxConnect($output, $dropbox_access_token);
@@ -54,7 +54,7 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
         }
 
         $this->dumpFolder = $this->getContainer()->get('kernel')->getRootDir() . "/tmp/dump";
-        
+
         $this->dumpFile   = $this->dumpFolder . '/' . "current.sql.bz2";
 
         if ($toContinue) {
@@ -72,17 +72,17 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
                 $toContinue = $fs->exists($this->dumpFile);
             }
         }
-        
+
         if ($toContinue) {
             $toContinue = $this->mysqlRestore($output);
         }
-        
+
         if ($toContinue) {
             $output->writeln('<info>MISSION ACCOMPLISHED</info>');
         } else {
-            $output->writeln('<error>Nasty error happened :\'-(</error>');
+            $output->writeln('<error>An error happened</error>');
             if ($this->failingProcess instanceOf Process) {
-                $output->writeln('<error>%s</error>', $this->failingProcess->getErrorOutput());
+                $output->writeln(sprintf('<error>%s</error>', $this->failingProcess->getErrorOutput()));
             }
         }
     }
@@ -104,9 +104,9 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
                 return true;
             } catch (IOException $e) {
                 $output->writeln(sprintf('<error>Failed to create dumpFolder %s</error>', $this->dumpFolder));
-            }        
+            }
         }
-        
+
         return true;
     }
 
@@ -119,22 +119,42 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
      */
     protected function mysqlRestore(OutputInterface $output)
     {
-        $dbName  = $this->getContainer()->getParameter('database_name');
-        $dbUser  = $this->getContainer()->getParameter('database_user');
-        $dbPwd   = $this->getContainer()->getParameter('database_password');
-        $dbHost  = $this->getContainer()->getParameter('database_host');
-        $command = sprintf('bzip2 -dc %s | mysql -u %s --password=%s -h %s %s ', $this->dumpFile, $dbUser, $dbPwd, $dbHost, $dbName);
-        $mysql   =  new Process($command);
-        $mysql->run();
-        if ($mysql->isSuccessful()) {
-            $output->writeln(sprintf('<info>Database %s restored succesfully</info>', $dbName));
-            return true;
+        $dbName     = $this->getContainer()->getParameter('database_name');
+        $dbUser     = $this->getContainer()->getParameter('database_user');
+        $dbPwd      = $this->getContainer()->getParameter('database_password');
+        $dbHost     = $this->getContainer()->getParameter('database_host');
+
+        $fs         = new Filesystem();
+        $sqlFile    = substr($this->dumpFile,0,-4);
+        $fs->remove($sqlFile);
+
+        $command    = sprintf('bzip2 -dk %s ', $this->dumpFile);
+        $decompress = new Process($command);
+        $decompress->run();
+        if (!$decompress->isSuccessful()) {
+            $output->writeln(sprintf('<error>Decompression failed - command : %s </error>', $command));
+            $output->writeln(sprintf('<error>Check if bzip2 is installed (sudo apt-get install bzip2)</error>'));
+            $this->failingProcess = $decompress;
+            return false;
         }
-        $this->failingProcess = $mysql;
-        
-        return false;
+
+        $output->writeln(sprintf('<info>Sql file decompressed into %s</info>', $sqlFile));
+
+        $mysql      = new Process(sprintf('mysql -e "source %s" -u %s --password=%s -h %s %s ',$sqlFile , $dbUser, $dbPwd, $dbHost, $dbName));
+        $mysql->run();
+        if (!$mysql->isSuccessful()) {
+            $output->writeln(sprintf('<error>Data load failed : %s</error>', $sqlFile));
+            $this->failingProcess = $mysql;
+            return false;
+        }
+
+        $fs->remove($sqlFile);
+
+        $output->writeln(sprintf('<info>Data loaded - Database %s restored succesfully</info>', $dbName));
+
+        return true;
     }
-    
+
     /**
      * Dropbox methods
      */

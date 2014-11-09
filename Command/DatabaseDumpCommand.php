@@ -73,9 +73,9 @@ class DatabaseDumpCommand extends ContainerAwareCommand
             }
             $output->writeln('<info>MISSION ACCOMPLISHED</info>');
         } else {
-            $output->writeln('<error>Nasty error happened :\'-(</error>');
+            $output->writeln('<error>An error happened</error>');
             if ($this->failingProcess instanceOf Process) {
-                $output->writeln('<error>%s</error>', $this->failingProcess->getErrorOutput());
+                $output->writeln(sprintf('<error>%s</error>', $this->failingProcess->getErrorOutput()));
             }
         }
     }
@@ -97,9 +97,9 @@ class DatabaseDumpCommand extends ContainerAwareCommand
                 return true;
             } catch (IOException $e) {
                 $output->writeln(sprintf('<error>Failed to create dumpFolder %s</error>', $this->dumpFolder));
-            }        
+            }
         }
-        
+
         return true;
     }
 
