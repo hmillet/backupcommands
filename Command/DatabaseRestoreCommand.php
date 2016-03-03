@@ -141,6 +141,7 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
         $output->writeln(sprintf('<info>Sql file decompressed into %s</info>', $sqlFile));
 
         $mysql      = new Process(sprintf('mysql -e "source %s" -u %s --password=%s -h %s %s ',$sqlFile , $dbUser, $dbPwd, $dbHost, $dbName));
+        $mysql->setTimeout(3600);
         $mysql->run();
         if (!$mysql->isSuccessful()) {
             $output->writeln(sprintf('<error>Data load failed : %s</error>', $sqlFile));
