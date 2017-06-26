@@ -8,7 +8,9 @@ use Symfony\Component\Process\Process;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Exception\IOException;
 
-use Dropbox\Client;
+use Kunnu\Dropbox\Dropbox;
+use Kunnu\Dropbox\DropboxApp;
+use Kunnu\Dropbox\DropboxFile;
 
 /**
  * Command that dumps
@@ -152,9 +154,12 @@ class DatabaseDumpCommand extends ContainerAwareCommand
     protected function dropboxConnect($output, $dropbox_access_token)
     {
         try {
-            $dbx_client           = new Client($dropbox_access_token, "HmilletBackupCommand/1.0", 'fr');
-            $dbx_account_info     = $dbx_client->getAccountInfo();
-            $output->writeln('<info>Connected to dropbox account "' . $dbx_account_info['display_name'] . '"</info>');
+            $app = new DropboxApp("client_id", "client_secret", $dropbox_access_token);
+            $dropbox = new Dropbox($app);
+            
+            $account = $dropbox->getCurrentAccount();
+            
+            $output->writeln('<info>Connected to dropbox account "' . $account->getDisplayName() . '"</info>');
         } catch (\Dropbox\Exception_InvalidAccessToken $e) {
             $response = $e->getMessage();
             $lines    = explode("\n", $response);
@@ -164,33 +169,31 @@ class DatabaseDumpCommand extends ContainerAwareCommand
             return false;
         }
 
-        return $dbx_client;
+        return $dropbox;
     }
 
-    protected function dropboxUpload($output, $client, $sourcePath, $dropboxPath)
+    protected function dropboxUpload($output, $dropbox, $sourcePath, $dropboxPath)
     {
-        $pathError = \Dropbox\Path::findErrorNonRoot($dropboxPath);
+        /*$pathError = \Dropbox\Path::findErrorNonRoot($dropboxPath);
         if ($pathError !== null) {
             $output->writeln('<error>Dropbox upload failed - Invalid <dropbox-path> : "' . $pathError . '"</error>');
 
             return false;
-        }
+        }*/
 
-        $size = null;
         if (\stream_is_local($sourcePath)) {
-            $size = \filesize($sourcePath);
+            $dropboxFile = new DropboxFile($sourcePath);
+            $file = $dropbox->upload($dropboxFile, $dropboxPath, ['autorename' => true]);
+    
+            $output->writeln('<info>File uploaded to dropbox : "' . $file->getPathDisplay() . '"</info>');
+    
+            return true;
+            
         } else {
             $output->writeln('<error>Dropbox upload failed - Invalid <source-path> : "' . $sourcePath . '"</error>');
 
             return false;
         }
 
-        $fp = fopen($sourcePath, "rb");
-        $metadata = $client->uploadFile($dropboxPath, \Dropbox\WriteMode::add(), $fp, $size);
-        fclose($fp);
-
-        $output->writeln('<info>File uploaded to dropbox : "' . $metadata['path'] . '"</info>');
-
-        return true;
     }
 }
