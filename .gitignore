@@ -3,3 +3,5 @@ nbproject/*
 .c9/*
 
 !*.gitkeep
+
+vendor/*
