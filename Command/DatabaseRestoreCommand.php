@@ -168,36 +168,18 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
      * Dropbox methods
      */
 
-    protected function dropboxConnect($output, $dropbox_access_token)
-    {
-        try {
-            $dbx_client           = new Client($dropbox_access_token, "HmilletBackupCommand/1.0", 'fr');
-            $dbx_account_info     = $dbx_client->getAccountInfo();
-            $output->writeln('<info>Connected to dropbox account "' . $dbx_account_info['display_name'] . '"</info>');
-        } catch (\Dropbox\Exception_InvalidAccessToken $e) {
-            $response = $e->getMessage();
-            $lines    = explode("\n", $response);
-            $message  = json_decode($lines[1], true);
-            $output->writeln('<error>Dropbox connection failed : "' . $lines[0] . " - " . $message['error'] . '"</error>');
-
-            return false;
-        }
-
-        return $dbx_client;
-    }
-
     protected function dropboxSelectFile($output, $dropbox)
     {
         $output->writeln('<question>Please choose the file to restore</question>');
 
         $path = "/";
+        
         do {
             $items = $dropbox->listFolder($path)->getItems();
-            $children = array();
+
             $folders  = array();
             $files    = array();
             foreach($items as $child) {
-                var_dump($child);
                 if ($child instanceof FolderMetadata) {
                     $folders[] = $child->getPathLower() . "/";
                 }
@@ -211,12 +193,20 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
             }
             $dialog = $this->getHelper('dialog');
             $choice = $dialog->select($output, 'Please select an entry :', $children, 0);
-
-            $path   = rtrim($children[$choice],"/");
-
-            $entry = $dropbox->getMetaData($path);
             
-        } while ($entry instanceof FolderMetadata);
+            if($choice == 0 && $path !== "/"){
+                $path = $previousPath;
+            }
+            else{
+                $previousPath = $path;
+                $path = rtrim($children[$choice],"/");
+            }
+
+            if ($path !== "/") {
+                $entry = $dropbox->getMetaData($path);
+            }
+            
+        } while ($path == "/" || $entry instanceof FolderMetadata);
 
         $output->writeln('<info>You choose : "' . $path . '"</info>');
 
