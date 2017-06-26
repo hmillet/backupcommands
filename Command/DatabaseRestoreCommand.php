@@ -215,14 +215,6 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
 
     protected function dropboxDownloadFile($output, $dropbox, $srcPath, $dstPath)
     {
-        /*
-        $pathError = \Dropbox\Path::findErrorNonRoot($srcPath);
-        if ($pathError !== null) {
-            $output->writeln('<error>Dropbox download failed - Invalid <dropbox-path> : "' . $pathError . '"</error>');
-
-            return false;
-        }
-        */
         $metadata = $dropbox->download($srcPath, $dstPath);
 
         if ($metadata === null) {

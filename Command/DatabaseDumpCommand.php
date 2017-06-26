@@ -153,14 +153,6 @@ class DatabaseDumpCommand extends ContainerAwareCommand
 
     protected function dropboxUpload($output, $dropbox, $sourcePath, $dropboxPath)
     {
-        // TODO? Retrieve function from the dropbox api v1 to check the path
-        /*$pathError = \Dropbox\Path::findErrorNonRoot($dropboxPath);
-        if ($pathError !== null) {
-            $output->writeln('<error>Dropbox upload failed - Invalid <dropbox-path> : "' . $pathError . '"</error>');
-
-            return false;
-        }*/
-        
         if (\stream_is_local($sourcePath)) {
             $dropboxFile = new DropboxFile($sourcePath);
             $file = $dropbox->upload($dropboxFile, $dropboxPath, ['autorename' => true]);
@@ -174,6 +166,5 @@ class DatabaseDumpCommand extends ContainerAwareCommand
 
             return false;
         }
-
     }
 }
