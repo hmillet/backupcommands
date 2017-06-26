@@ -9,7 +9,12 @@ use Symfony\Component\Filesystem\Exception\IOException;
 
 use Symfony\Component\Process\Process;
 
-use Dropbox\Client;
+use Hmillet\BackupCommandsBundle\DropboxConnect;
+
+use Kunnu\Dropbox\Dropbox;
+use Kunnu\Dropbox\DropboxApp;
+use Kunnu\Dropbox\DropboxFile;
+use Kunnu\Dropbox\Models\FolderMetadata;
 
 /**
  * Command that dumps
@@ -48,7 +53,10 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
 
         try {
             $dropbox_access_token = $this->getContainer()->getParameter('hmillet_backup_commands.dropbox.access_token');
-            $dbx_client           = $this->dropboxConnect($output, $dropbox_access_token);
+            
+            $connection = new DropboxConnect($dropbox_access_token);
+            
+            $dbx_client = $connection->connect($output);
             $dropboxBackup = true;
         } catch (\Symfony\Component\DependencyInjection\Exception\InvalidArgumentException $e) {
         }
@@ -160,41 +168,23 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
      * Dropbox methods
      */
 
-    protected function dropboxConnect($output, $dropbox_access_token)
-    {
-        try {
-            $dbx_client           = new Client($dropbox_access_token, "HmilletBackupCommand/1.0", 'fr');
-            $dbx_account_info     = $dbx_client->getAccountInfo();
-            $output->writeln('<info>Connected to dropbox account "' . $dbx_account_info['display_name'] . '"</info>');
-        } catch (\Dropbox\Exception_InvalidAccessToken $e) {
-            $response = $e->getMessage();
-            $lines    = explode("\n", $response);
-            $message  = json_decode($lines[1], true);
-            $output->writeln('<error>Dropbox connection failed : "' . $lines[0] . " - " . $message['error'] . '"</error>');
-
-            return false;
-        }
-
-        return $dbx_client;
-    }
-
-    protected function dropboxSelectFile($output, $client)
+    protected function dropboxSelectFile($output, $dropbox)
     {
         $output->writeln('<question>Please choose the file to restore</question>');
 
         $path = "/";
-        $entry = $client->getMetadataWithChildren($path);
+        
+        do {
+            $items = $dropbox->listFolder($path)->getItems();
 
-        while ($entry["is_dir"]) {
-            $children = array();
             $folders  = array();
             $files    = array();
-            foreach($entry["contents"] as $child) {
-                if (($child["is_dir"])) {
-                    $folders[] = $child['path'] . "/";
+            foreach($items as $child) {
+                if ($child instanceof FolderMetadata) {
+                    $folders[] = $child->getPathLower() . "/";
                 }
                 else {
-                    $files[]   = $child['path'];
+                    $files[]   = $child->getPathLower();
                 }
             }
             $children = array_merge($folders, $files);
@@ -203,29 +193,30 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
             }
             $dialog = $this->getHelper('dialog');
             $choice = $dialog->select($output, 'Please select an entry :', $children, 0);
+            
+            if($choice == 0 && $path !== "/"){
+                $path = $previousPath;
+            }
+            else{
+                $previousPath = $path;
+                $path = rtrim($children[$choice],"/");
+            }
 
-            $path   = rtrim($children[$choice],"/");
-
-            $entry  = $client->getMetadataWithChildren($path);
-            $path   = $entry['path'];
-        }
+            if ($path !== "/") {
+                $entry = $dropbox->getMetaData($path);
+            }
+            
+        } while ($path == "/" || $entry instanceof FolderMetadata);
 
         $output->writeln('<info>You choose : "' . $path . '"</info>');
 
         return $path;
-
     }
 
-    protected function dropboxDownloadFile($output, $client, $srcPath, $dstPath)
+    protected function dropboxDownloadFile($output, $dropbox, $srcPath, $dstPath)
     {
-        $pathError = \Dropbox\Path::findErrorNonRoot($srcPath);
-        if ($pathError !== null) {
-            $output->writeln('<error>Dropbox download failed - Invalid <dropbox-path> : "' . $pathError . '"</error>');
+        $metadata = $dropbox->download($srcPath, $dstPath);
 
-            return false;
-        }
-
-        $metadata = $client->getFile($srcPath, fopen($dstPath, "wb"));
         if ($metadata === null) {
             fwrite(STDERR, "File not found on Dropbox.\n");
             return false;

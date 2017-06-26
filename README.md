@@ -14,8 +14,7 @@ Add the following code to your composer.json :
 
     "require": {
         ...
-        "hmillet/backup-commands-bundle": "dev-master",
-        "dropbox/dropbox-sdk": "1.1.*"
+        "hmillet/backup-commands-bundle": "dev-master"
         ...
     },
 
@@ -69,12 +68,7 @@ This bundle needs (in local and remote server)
   * mysqldump (commandline)
   * bunzip2 (commandline)
 
-The library dropbox-sdk-php needs :
-
-  * PHP 5.3+, [with 64-bit integers](http://stackoverflow.com/questions/864058/how-to-have-64-bit-integer-on-php).
-  * PHP [cURL extension](http://php.net/manual/en/curl.installation.php) with SSL enabled (it's usually built-in).
-  * Must not be using [`mbstring.func_overload`](http://www.php.net/manual/en/mbstring.overload.php) to overload PHP's standard string functions.
-
+See the [Getting Started](https://github.com/kunalvarma05/dropbox-php-sdk/wiki/Getting-Started) page of the [dropbox-sdk-php](https://github.com/kunalvarma05/dropbox-php-sdk) library.
 
 ## Command line ##
 
@@ -84,4 +78,8 @@ Now from your console you can run
 
 and see that a new file has been saved in folder /app/tmp/dump with an hard link to the newest one.
 
+You can run
 
+    ./app/console db:restore
+
+and choose which file you want to restore.
