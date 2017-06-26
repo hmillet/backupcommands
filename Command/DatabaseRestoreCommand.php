@@ -9,7 +9,12 @@ use Symfony\Component\Filesystem\Exception\IOException;
 
 use Symfony\Component\Process\Process;
 
-use Dropbox\Client;
+use Hmillet\BackupCommandsBundle\DropboxConnect;
+
+use Kunnu\Dropbox\Dropbox;
+use Kunnu\Dropbox\DropboxApp;
+use Kunnu\Dropbox\DropboxFile;
+use Kunnu\Dropbox\Models\FolderMetadata;
 
 /**
  * Command that dumps
@@ -48,7 +53,10 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
 
         try {
             $dropbox_access_token = $this->getContainer()->getParameter('hmillet_backup_commands.dropbox.access_token');
-            $dbx_client           = $this->dropboxConnect($output, $dropbox_access_token);
+            
+            $connection = new DropboxConnect($dropbox_access_token);
+            
+            $dbx_client = $connection->connect($output);
             $dropboxBackup = true;
         } catch (\Symfony\Component\DependencyInjection\Exception\InvalidArgumentException $e) {
         }
@@ -178,23 +186,23 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
         return $dbx_client;
     }
 
-    protected function dropboxSelectFile($output, $client)
+    protected function dropboxSelectFile($output, $dropbox)
     {
         $output->writeln('<question>Please choose the file to restore</question>');
 
         $path = "/";
-        $entry = $client->getMetadataWithChildren($path);
-
-        while ($entry["is_dir"]) {
+        do {
+            $items = $dropbox->listFolder($path)->getItems();
             $children = array();
             $folders  = array();
             $files    = array();
-            foreach($entry["contents"] as $child) {
-                if (($child["is_dir"])) {
-                    $folders[] = $child['path'] . "/";
+            foreach($items as $child) {
+                var_dump($child);
+                if ($child instanceof FolderMetadata) {
+                    $folders[] = $child->getPathLower() . "/";
                 }
                 else {
-                    $files[]   = $child['path'];
+                    $files[]   = $child->getPathLower();
                 }
             }
             $children = array_merge($folders, $files);
@@ -206,26 +214,27 @@ class DatabaseRestoreCommand extends ContainerAwareCommand
 
             $path   = rtrim($children[$choice],"/");
 
-            $entry  = $client->getMetadataWithChildren($path);
-            $path   = $entry['path'];
-        }
+            $entry = $dropbox->getMetaData($path);
+            
+        } while ($entry instanceof FolderMetadata);
 
         $output->writeln('<info>You choose : "' . $path . '"</info>');
 
         return $path;
-
     }
 
-    protected function dropboxDownloadFile($output, $client, $srcPath, $dstPath)
+    protected function dropboxDownloadFile($output, $dropbox, $srcPath, $dstPath)
     {
+        /*
         $pathError = \Dropbox\Path::findErrorNonRoot($srcPath);
         if ($pathError !== null) {
             $output->writeln('<error>Dropbox download failed - Invalid <dropbox-path> : "' . $pathError . '"</error>');
 
             return false;
         }
+        */
+        $metadata = $dropbox->download($srcPath, $dstPath);
 
-        $metadata = $client->getFile($srcPath, fopen($dstPath, "wb"));
         if ($metadata === null) {
             fwrite(STDERR, "File not found on Dropbox.\n");
             return false;

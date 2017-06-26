@@ -8,6 +8,8 @@ use Symfony\Component\Process\Process;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Filesystem\Exception\IOException;
 
+use Hmillet\BackupCommandsBundle\DropboxConnect;
+
 use Kunnu\Dropbox\Dropbox;
 use Kunnu\Dropbox\DropboxApp;
 use Kunnu\Dropbox\DropboxFile;
@@ -48,7 +50,9 @@ class DatabaseDumpCommand extends ContainerAwareCommand
         $dropboxBackup = false;
         try {
             $dropbox_access_token = $this->getContainer()->getParameter('hmillet_backup_commands.dropbox.access_token');
-            $dbx_client           = $this->dropboxConnect($output, $dropbox_access_token);
+            
+            $connection = new DropboxConnect($dropbox_access_token);
+            $dbx_client = $connection->connect($output);
             $dropboxBackup = true;
         } catch (\Symfony\Component\DependencyInjection\Exception\InvalidArgumentException $e) {
         }
@@ -147,40 +151,16 @@ class DatabaseDumpCommand extends ContainerAwareCommand
         return false;
     }
 
-    /**
-     * Dropbox methods
-     */
-
-    protected function dropboxConnect($output, $dropbox_access_token)
-    {
-        try {
-            $app = new DropboxApp("client_id", "client_secret", $dropbox_access_token);
-            $dropbox = new Dropbox($app);
-            
-            $account = $dropbox->getCurrentAccount();
-            
-            $output->writeln('<info>Connected to dropbox account "' . $account->getDisplayName() . '"</info>');
-        } catch (\Dropbox\Exception_InvalidAccessToken $e) {
-            $response = $e->getMessage();
-            $lines    = explode("\n", $response);
-            $message  = json_decode($lines[1], true);
-            $output->writeln('<error>Dropbox connection failed : "' . $lines[0] . " - " . $message['error'] . '"</error>');
-
-            return false;
-        }
-
-        return $dropbox;
-    }
-
     protected function dropboxUpload($output, $dropbox, $sourcePath, $dropboxPath)
     {
+        // TODO? Retrieve function from the dropbox api v1 to check the path
         /*$pathError = \Dropbox\Path::findErrorNonRoot($dropboxPath);
         if ($pathError !== null) {
             $output->writeln('<error>Dropbox upload failed - Invalid <dropbox-path> : "' . $pathError . '"</error>');
 
             return false;
         }*/
-
+        
         if (\stream_is_local($sourcePath)) {
             $dropboxFile = new DropboxFile($sourcePath);
             $file = $dropbox->upload($dropboxFile, $dropboxPath, ['autorename' => true]);
