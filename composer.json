@@ -17,7 +17,7 @@
     ],
     "require": {
         "php": ">=5.3.2",
-        "symfony/symfony": "*",
+        "symfony/symfony": ">=3.0",
         "kunalvarma05/dropbox-php-sdk": "^0.2.0"
     },
     "autoload": {
